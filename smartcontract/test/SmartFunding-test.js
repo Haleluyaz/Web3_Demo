@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers, waffle } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { utils } = ethers;
-const { provider } = waffle;
+// const { provider } = waffle;
 
 const decimals = 18;
 
@@ -129,7 +129,7 @@ describe("SmartFunding operations", function () {
     it("Should refund success", async function() {
         const tx = await fundingContract.connect(investor1).invest({value: utils.parseEther("0.9")});
         await tx.wait();
-        expect(await provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0.9"))
+        expect(await smock.Provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0.9"))
         
         // Smock
         await fundingContract.setVariable('fundingStage' , 3);
@@ -137,7 +137,7 @@ describe("SmartFunding operations", function () {
         await tx2.wait();
 
         expect(await fundingContract.pool()).to.equal(utils.parseEther("0"));
-        expect(await provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0"))
+        expect(await smock.Provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0"))
     })
 
     it("Should reject invest when no invest or refunded", async function() {
