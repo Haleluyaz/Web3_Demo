@@ -2,15 +2,17 @@
 pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
 
 // Reward = (totalSupply / goal) * input
 
-contract SmartFunding {
+contract SmartFunding is KeeperCompatibleInterface  {
     uint256 public fundingStage; // 0 = INACTIVE, 1 = ACTIVE, 2 = SUCCESS, 3 = FAIL
     address public tokenAddress;
     uint public goal;
     uint public pool;
-    uint public endTimeInDay;
+    uint public endTime;
+    address upkeepAddress;
 
     mapping(address => uint256) public investOf;
     mapping(address => uint256) public rewardOf;
@@ -20,8 +22,9 @@ contract SmartFunding {
     event ClaimReward(address indexed from, uint256 amount);
     event Refund(address indexed from, uint256 amount);
 
-    constructor(address _tokenAddress) {
+    constructor(address _tokenAddress, address _upkeepAddress) {
         tokenAddress = _tokenAddress;
+        upkeepAddress = _upkeepAddress;
         fundingStage = 0;
     }
 
@@ -65,9 +68,9 @@ contract SmartFunding {
     }
 
 
-    function initialize(uint _goal, uint _endTimeInDay) external {
+    function initialize(uint _goal, uint _endTime) external {
         goal = _goal;
-        endTimeInDay = block.timestamp + (_endTimeInDay * 1 days);
+        endTime = block.timestamp + (_endTime * 1 minutes);
         fundingStage = 1;
     }
 
@@ -100,5 +103,19 @@ contract SmartFunding {
         payable(msg.sender).transfer(investAmount);
 
         emit Refund(msg.sender, investAmount);
+    }
+
+    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory /* performData */) {
+        upkeepNeeded = endTime == 1 && block.timestamp >= endTime;
+    }
+
+    function performUpkeep(bytes calldata /* performData */) external override {
+        require(msg.sender == upkeepAddress, "Permission denied");
+
+        if (pool >= goal) {
+            fundingStage = 2;
+        } else {
+            fundingStage = 3;
+        }
     }
 }

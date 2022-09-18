@@ -5,18 +5,22 @@
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
 const hre = require("hardhat");
+const { ethers } = require("hardhat");
+const { utils } = ethers;
 
 async function main() {
   
   const APPToekn = await ethers.getContractFactory("APPToken");
   const tokenContract = await APPToekn.deploy();
-  await tokenContract.deplyTransaction.wait(5);
+  // await tokenContract.deplyTransaction.wait(6);
   await tokenContract.deployed();
   
   const SmartFundingContract = await ethers.getContractFactory("SmartFunding");
-  const fundingContract = await SmartFundingContract.deploy(tokenContract.address);
-  await fundingContract.deplyTransaction.wait(5);
+  const fundingContract = await SmartFundingContract.deploy(tokenContract.address, "0x02777053d6764996e594c3E88AF1D58D5363a2e6");
+  // await fundingContract.deplyTransaction.wait(6);
   await fundingContract.deployed();
+  const tx = await fundingContract.initialize(utils.parseEther("1"), 3);
+  await tx.wait();
 
   console.log("APPToken deployed to:", tokenContract.address);
   console.log("SmartFunding deployed to:", fundingContract.address);
@@ -32,7 +36,7 @@ async function main() {
     await hre.run("verify:verify", {
        address: fundingContract.address,
        constructorArguments: [
-            tokenContract.address 
+            tokenContract.address, "0x02777053d6764996e594c3E88AF1D58D5363a2e6"
        ]
   });
   } catch {}

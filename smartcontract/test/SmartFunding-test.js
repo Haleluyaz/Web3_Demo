@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { ethers, waffle } = require("hardhat");
+const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { utils } = ethers;
 // const { provider } = waffle;
@@ -18,7 +18,7 @@ describe("Deploy smart funding contract", function () {
         await tokenContract.deployed();
 
         const SmartFundingContract = await ethers.getContractFactory("SmartFunding");
-        fundingContract = await SmartFundingContract.deploy(tokenContract.address);
+        fundingContract = await SmartFundingContract.deploy(tokenContract.address, "0x02777053d6764996e594c3E88AF1D58D5363a2e6");
         await fundingContract.deployed();
     })
         
@@ -61,7 +61,7 @@ describe("SmartFunding operations", function () {
         const SmartFundingContract = await smock.mock("SmartFunding"); 
         // const SmartFundingContract = await ethers.getContractFactory("SmartFunding");
 
-        fundingContract = await SmartFundingContract.deploy(tokenContract.address);
+        fundingContract = await SmartFundingContract.deploy(tokenContract.address, "0x02777053d6764996e594c3E88AF1D58D5363a2e6");
         await fundingContract.deployed();
 
         await tokenContract.connect(owner).transfer(fundingContract.address, utils.parseUnits("1000000", decimals));
@@ -129,7 +129,7 @@ describe("SmartFunding operations", function () {
     it("Should refund success", async function() {
         const tx = await fundingContract.connect(investor1).invest({value: utils.parseEther("0.9")});
         await tx.wait();
-        expect(await smock.Provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0.9"))
+        expect(await ethers.provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0.9"))
         
         // Smock
         await fundingContract.setVariable('fundingStage' , 3);
@@ -137,7 +137,7 @@ describe("SmartFunding operations", function () {
         await tx2.wait();
 
         expect(await fundingContract.pool()).to.equal(utils.parseEther("0"));
-        expect(await smock.Provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0"))
+        expect(await ethers.provider.getBalance(fundingContract.address)).to.equal(utils.parseEther("0"))
     })
 
     it("Should reject invest when no invest or refunded", async function() {
