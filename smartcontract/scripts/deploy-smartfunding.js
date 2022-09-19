@@ -19,7 +19,7 @@ async function main() {
   const fundingContract = await SmartFundingContract.deploy(tokenContract.address, "0x02777053d6764996e594c3E88AF1D58D5363a2e6");
   // await fundingContract.deplyTransaction.wait(6);
   await fundingContract.deployed();
-  const tx = await fundingContract.initialize(utils.parseEther("1"), 3);
+  const tx = await fundingContract.initialize(utils.parseEther("1"), 7);
   await tx.wait();
 
   console.log("APPToken deployed to:", tokenContract.address);
@@ -36,7 +36,8 @@ async function main() {
     await hre.run("verify:verify", {
        address: fundingContract.address,
        constructorArguments: [
-            tokenContract.address, "0x02777053d6764996e594c3E88AF1D58D5363a2e6"
+            tokenContract.address, 
+            "0x02777053d6764996e594c3E88AF1D58D5363a2e6"
        ]
   });
   } catch {}

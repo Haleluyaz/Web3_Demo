@@ -152,4 +152,19 @@ describe("SmartFunding operations", function () {
         const tx3 = fundingContract.connect(investor1).refund();
         await expect(tx3).to.be.revertedWith("No invest");
     })
+
+    it("Should calculate normal case success", async function() {
+        const result = await fundingContract.calculateReward(utils.parseEther("0.9"));
+        expect(await result).to.equal(utils.parseUnits("900000", decimals));
+    })
+
+    it("Should calculate normal case success", async function() {
+        const result = await fundingContract.calculateReward(utils.parseEther("1"));
+        expect(await result).to.equal(utils.parseUnits("1000000", decimals));
+    })
+
+    it("Should calculate over case success", async function() {
+        const result = await fundingContract.calculateReward(utils.parseEther("2"));
+        expect(await result).to.equal(utils.parseUnits("1000000", decimals));
+    })
 })

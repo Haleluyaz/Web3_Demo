@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
 
 // Reward = (totalSupply / goal) * input
 
-contract SmartFunding is KeeperCompatibleInterface  {
+contract SmartFunding is KeeperCompatibleInterface, Ownable, Pausable {
     uint256 public fundingStage; // 0 = INACTIVE, 1 = ACTIVE, 2 = SUCCESS, 3 = FAIL
     address public tokenAddress;
     uint public goal;
@@ -38,16 +40,6 @@ contract SmartFunding is KeeperCompatibleInterface  {
         _;
     }
 
-     modifier whenInvestedNotActiveStage () {
-         require(fundingStage == 1, "Stage isn't active");
-        _;
-    }
-
-     modifier whenInvestedNotSuccess () {
-         require(fundingStage == 2, "Stage isn't success");
-        _;
-    }
-
      modifier whenNoReward () {
          require(rewardOf[msg.sender] > 0, "No reward");
         _;
@@ -62,21 +54,31 @@ contract SmartFunding is KeeperCompatibleInterface  {
          require(investOf[msg.sender] > 0, "No invest");
         _;
     }
-     modifier whenRefundFailed () {
-         require(fundingStage == 3, "Stage isn't fail");
+
+     modifier atStage (uint stage) {
+         require(fundingStage == stage, "Stage is wrong");
         _;
     }
 
-
-    function initialize(uint _goal, uint _endTime) external {
+    function initialize(uint _goal, uint _endTime) external onlyOwner {
         goal = _goal;
-        endTime = block.timestamp + (_endTime * 1 minutes);
+        endTime = block.timestamp + (_endTime * 1 days);
         fundingStage = 1;
     }
 
-    function invest () external payable whenInvested whenInvestedZero whenInvestedNotActiveStage {
+    function calculateReward (uint amount) public view returns (uint) {
+        uint totalPool = pool + amount;
         uint256 totalSupply = IERC20(tokenAddress).totalSupply();
-        uint256 rewardAmount = (totalSupply / goal) * msg.value;
+
+        if(totalPool <= goal) {
+            return (totalSupply / goal) * amount;
+        } else {
+             return (totalSupply / goal) * (goal - pool);
+        }
+    }
+
+    function invest () external payable whenInvested whenInvestedZero atStage(1) whenNotPaused {
+        uint256 rewardAmount = calculateReward(msg.value);
 
         investOf[msg.sender] = msg.value;
         rewardOf[msg.sender] = rewardAmount;
@@ -85,7 +87,7 @@ contract SmartFunding is KeeperCompatibleInterface  {
         emit Invest(msg.sender, msg.value);
     }
 
-    function claim() external whenClaimed whenNoReward whenInvestedNotSuccess {
+    function claim() external whenClaimed whenNoReward atStage(2) whenNotPaused {
         uint256 reward = rewardOf[msg.sender];
         claimedOf[msg.sender] = true;
         rewardOf[msg.sender] = 0;
@@ -94,7 +96,7 @@ contract SmartFunding is KeeperCompatibleInterface  {
         emit ClaimReward(msg.sender, reward);
     }
 
-    function refund() external whenRefundWithNoInvest whenRefundFailed {
+    function refund() external whenRefundWithNoInvest atStage(3) whenNotPaused {
         uint256 investAmount = investOf[msg.sender];
         investOf[msg.sender] = 0;
         rewardOf[msg.sender] = 0;
@@ -105,17 +107,26 @@ contract SmartFunding is KeeperCompatibleInterface  {
         emit Refund(msg.sender, investAmount);
     }
 
-    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory /* performData */) {
-        upkeepNeeded = endTime == 1 && block.timestamp >= endTime;
+    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        upkeepNeeded = fundingStage == 1 && block.timestamp >= endTime;
+        performData = new bytes(0);
     }
 
     function performUpkeep(bytes calldata /* performData */) external override {
         require(msg.sender == upkeepAddress, "Permission denied");
 
         if (pool >= goal) {
-            fundingStage = 2;
+            fundingStage = 2;  
         } else {
             fundingStage = 3;
         }
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 }
