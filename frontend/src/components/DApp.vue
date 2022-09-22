@@ -1,5 +1,50 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { ethers, utils } from 'ethers'
+import abi from '../assets/abi.json'
+
+const accountAddress = ref('')
+const goal = ref('')
+const pool = ref('')
+const progress = ref(0)
+const investAmount = ref('')
+const rewardAmount = ref('')
+
+let contract = {}
+
+watch(pool, (value) => {
+  progress.value = (pool.value / goal.value) * 100
+})
+
+watch(investAmount, async (value) => {
+  const reward = await contract.calculateReward(utils.parseEther(value)).then(res => utils.formatUnits(res, 18))
+  rewardAmount.value = reward;
+})
+
+onMounted(async() =>
+{
+  await window.ethereum.request({method: 'eth_requestAccounts'})
+  const provide = new ethers.providers.Web3Provider(window.ethereum)
+  const signer = await provide.getSigner()
+  // console.log(await signer.getAddress())
+  
+  contract = new ethers.Contract (
+    `${import.meta.env.VITE_CONTRACT_ADDRESS}`,
+    abi,
+    signer
+    )
+
+    
+  goal.value = await contract.goal().then(res => utils.formatEther(res))
+  pool.value = await contract.pool().then(res => utils.formatEther(res))
+
+  // const result = await contract.calculateReward(utils.parseEther("0.1"))
+  // console.log(utils.formatEther(result, 18))
+
+  accountAddress.value = await signer.getAddress()
+  
+
+})
 
 const style = {
   header: "max-w-7xl mx-auto sm:px-6 lg:px-8",
@@ -35,7 +80,7 @@ const style = {
           </div>
           <div class="rounded-md shadow">
             <button :class=style.metamaskBtn>
-              <span>Connect</span>
+              <span>{{ accountAddress }}</span>
             </button>
           </div>
         </div>
@@ -52,7 +97,7 @@ const style = {
                   <label for="success" class="text-gray-700 select-none font-medium text-sm">You Buy</label>
                   <div class="flex flex-row">
                     <span :class=style.currency >ETH</span>
-                    <input type="text" name="default" placeholder="0.00" :class=style.textBox />
+                    <input v-model="investAmount" type="text" name="default" placeholder="0.00" :class=style.textBox />
                   </div>
                 </div>
               </div>
@@ -64,7 +109,7 @@ const style = {
                   </label>
                   <div class="flex flex-row">
                     <span :class=style.currency>UTD</span>
-                    <input :class=style.textBox type="text"  placeholder="0" disabled/>
+                    <input v-model="rewardAmount" :class=style.textBox type="text"  placeholder="0" disabled/>
                   </div>
                 </div>
               </div>
@@ -75,7 +120,7 @@ const style = {
             </div>
           </div>
         </div>
-        <div v-show="true" class="relative py-3 sm:max-w-sm sm:mx-auto">
+        <div v-show="false" class="relative py-3 sm:max-w-sm sm:mx-auto">
           <div class="flex flex-col bg-white px-8 py-6 max-w-sm mx-auto rounded-lg shadow-lg">
             <div class="flex justify-center items-center font-bold text-xl">Pending Reward</div>
             <div class="mt-4">
@@ -99,12 +144,12 @@ const style = {
       <div class="text-lg text-center text-gray-700 font-bold">
         <p v-show="false" class="text-orange-500">Pending: 0x0</p>
         <hr />
-        <div>Goal: 1 ETH</div>
-        <div>Pool: 0 ETH</div>
+        <div>Goal: {{ goal }} ETH</div>
+        <div>Pool: {{ pool }} ETH</div>
       </div>
       <div class="mt-2 bg-gray-300 rounded-full">
-        <div :class=style.progressBar v-bind:style="{ width: 0 + '%' }">
-          <div class="text-white text-sm inline-block px-2 rounded-full">0%</div>
+        <div :class=style.progressBar v-bind:style="{ width: progress + '%' }">
+          <div class="text-white text-sm inline-block px-2 rounded-full">{{ progress }}%</div>
         </div>
       </div>
       <br />
