@@ -2,6 +2,7 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { ethers, utils } from 'ethers'
 import abi from '../assets/abi.json'
+import { Countdown } from 'vue3-flip-countdown'
 
 const accountAddress = ref('')
 const goal = ref('')
@@ -13,6 +14,7 @@ const txHash = ref('')
 const hasReward = ref(false)
 const accountReward = ref('')
 const fundingStage = ref(0)
+const endTime = ref(0)
 
 let contract = {}
 
@@ -30,11 +32,17 @@ async function invest() {
   const tx = await contract.invest({value: utils.parseEther(investAmount.value)})
   txHash.value = tx.txHash
   await tx.wait()
+
+  window.location.reload()
 }
 
 onMounted(async() =>
 {
   await window.ethereum.request({method: 'eth_requestAccounts'})
+
+  window.ethereum.on('accountsChanged', () => window.location.reload())
+  window.ethereum.on('chainChanged', () => window.location.reload())
+
   const provide = new ethers.providers.Web3Provider(window.ethereum)
   const signer = await provide.getSigner()
   accountAddress.value = await signer.getAddress()
@@ -46,9 +54,10 @@ onMounted(async() =>
     signer
     )
 
-  await contract.fundingStage().then(res => fundingStage.value = parseInt(res))
+  contract.fundingStage().then(res => fundingStage.value = parseInt(res))
+  contract.endTime().then(res => endTime.value = res * 1000)
 
-  await contract.rewardOf(accountAddress.value).then(res => {   
+  contract.rewardOf(accountAddress.value).then(res => {   
     const reward = utils.formatUnits(res, 18)
     if(reward !=0) {
       hasReward.value = true
@@ -106,6 +115,10 @@ const style = {
         </div>
       </div>
     </header>
+    <div v-if="endTime != 0">
+      End Time
+      <Countdown mainColor="#ffffff" labelSize="0.7em" :deadlineDate="new Date(endTime)"/>
+    </div>
     <main :class=style.main>
       <div>
         <div v-show="!hasReward" class="relative py-3 sm:max-w-sm sm:mx-auto">
