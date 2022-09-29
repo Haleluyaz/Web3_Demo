@@ -23,6 +23,7 @@ contract SmartFunding is KeeperCompatibleInterface, Ownable, Pausable {
     event Invest(address indexed from, uint256 amount);
     event ClaimReward(address indexed from, uint256 amount);
     event Refund(address indexed from, uint256 amount);
+    event StageChange(address indexed from, uint256 stage);
 
     constructor(address _tokenAddress, address _upkeepAddress) {
         tokenAddress = _tokenAddress;
@@ -62,7 +63,7 @@ contract SmartFunding is KeeperCompatibleInterface, Ownable, Pausable {
 
     function initialize(uint _goal, uint _endTime) external onlyOwner {
         goal = _goal;
-        endTime = block.timestamp + (_endTime * 1 days);
+        endTime = block.timestamp + (_endTime * 1 minutes);
         fundingStage = 1;
     }
 
@@ -120,6 +121,8 @@ contract SmartFunding is KeeperCompatibleInterface, Ownable, Pausable {
         } else {
             fundingStage = 3;
         }
+
+        emit StageChange(msg.sender, fundingStage);
     }
 
     function pause() public onlyOwner {
