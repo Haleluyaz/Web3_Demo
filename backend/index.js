@@ -1,14 +1,16 @@
-if(process.env.NODE_ENV !== 'production')
-{
-    require('dotenv').config();
-    __dirname = './';
-}
 
 const express = require('express');
 const { ethers, utils } = require('ethers');
 const fs = require('fs');
 const { join } = require('path');
 const cors = require('cors');
+
+if(process.env.NODE_ENV !== 'production')
+{
+    require('dotenv').config();
+    __dirname = './';
+}
+
 const port = 5000;
 const app = express();
 app.use(cors());
