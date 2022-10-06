@@ -1,15 +1,20 @@
-require('dotenv').config();
+if(process.env.NODE_ENV !== 'production')
+{
+    require('dotenv').config();
+    __dirname = './';
+}
 
 const express = require('express');
 const { ethers, utils } = require('ethers');
 const fs = require('fs');
 const { join } = require('path');
-const cors = require('cors')
+const cors = require('cors');
 const port = 5000;
 const app = express();
 app.use(cors());
 app.use((req, res, next) => {
-    const rawJson = fs.readFileSync(join('./', 'abi.json'), 'utf8');
+    const rawJson = fs.readFileSync(join(__dirname, 'abi.json'), 'utf8');
+    // const rawJson = fs.readFileSync(join('./', 'abi.json'), 'utf8');
     const abi = JSON.parse(rawJson);
     const provider = new ethers.providers.JsonRpcProvider(`${process.env.GORELI_URL}`, 5);
     const signer = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
