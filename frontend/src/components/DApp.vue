@@ -85,7 +85,7 @@ onMounted(async() =>
   window.ethereum.on('accountsChanged', () => window.location.reload())
   window.ethereum.on('chainChanged', () => window.location.reload())
 
-  axios.get('http://localhost:5000/').then(res => {
+  axios.get(`${import.meta.env.VITE_BACKEND_URL}`).then(res => {
     console.log(res),
     goal.value = res.data.goal,
     pool.value = res.data.pool,
